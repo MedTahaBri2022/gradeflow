@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: gradeflow
+      POSTGRES_PASSWORD: gradeflow
+      POSTGRES_DB: gradeflow
+    ports:
+      - '54323:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gradeflow -d gradeflow']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    # Unlike a cache, a job queue must not lose data: append-only persistence
+    # on, and never evict keys when memory is full (BullMQ requires noeviction).
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - '63793:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  db-data:
+  redis-data:
